@@ -126,8 +126,8 @@ int main(int argc,char *argv[])
 	printf("%d\n", N);
 	bodies = (struct body*)malloc(sizeof(struct body)*N);
 	bodies_new = (struct body*)malloc(sizeof(struct body)*N);
-  Fx = (double*)malloc(sizeof(double)*N);
-  Fy = (double*)malloc(sizeof(double)*N);
+	Fx = (double*)malloc(sizeof(double)*N);
+	Fy = (double*)malloc(sizeof(double)*N);
 	for (i=0; i<N; i++){
 		fscanf(fp,"%lf %lf %lf %lf",&bodies[i].x, &bodies[i].y, &bodies[i].vx, &bodies[i].vy);
 		printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
@@ -148,16 +148,16 @@ int main(int argc,char *argv[])
 			bodies[i].vx = vx_new[i]; // update velocity
 			bodies[i].vy = vy_new[i];*/
 		}
-   if(enableX11){
-    clear(length, length);
-		for(i=0;i<N;i++) {
-			x=(bodies[i].x-xmin)*unit;
-			y=(bodies[i].y-ymin)*unit;
-			if(x>0&&x<length&&y>0&&y<length)
-				draw(x,y);
+		if(enableX11){
+			clear(length, length);
+			for(i=0;i<N;i++) {
+				x=(bodies[i].x-xmin)*unit;
+				y=(bodies[i].y-ymin)*unit;
+				if(x>0&&x<length&&y>0&&y<length)
+					draw(x,y);
+			}
+			XFlush(display);
 		}
-    XFlush(display);
-  }
 	}
 	
 	return 0;
