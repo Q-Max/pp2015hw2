@@ -175,8 +175,8 @@ inline void computeForce(struct body *bodies ,double m, double *Fx, double *Fy, 
       if(r==0)
         puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
       else{
-        fxt += ((G * m * m) * (bodies[j].x-bodies[i].x) / (r * r * r));
-        fyt += ((G * m * m) * (bodies[j].y-bodies[i].y) / (r * r * r));
+        fxt += ((G * m * m) * (bodies[j].x-bodies[i].x) / (r * r));
+        fyt += ((G * m * m) * (bodies[j].y-bodies[i].y) / (r * r));
       }
     }
     Fx[i] = fxt;
