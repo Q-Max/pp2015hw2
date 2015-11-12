@@ -143,7 +143,7 @@ int main(int argc,char *argv[])
 			bodies_new[i].y = bodies[i].y + bodies_new[i].vy * t; // compute new position
 		}
 		for(i=0; i<N; i++){
-      bodies[i] = bodies_new[i];
+			bodies[i] = bodies_new[i];
 			/*bodies[i].x = x_new[i]; // update position
 			bodies[i].y = y_new[i];
 			bodies[i].vx = vx_new[i]; // update velocity
@@ -154,7 +154,7 @@ int main(int argc,char *argv[])
 			for(i=0;i<N;i++) {
 				x=(bodies[i].x-xmin)*unit;
 				y=(bodies[i].y-ymin)*unit;
-				if(x>0&&x<length&&y>0&&y<length)
+				if(x>0&&x<Length&&y>0&&y<Length)
 					draw(x,y);
 			}
 			XFlush(display);
