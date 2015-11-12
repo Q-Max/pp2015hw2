@@ -154,7 +154,7 @@ int main(int argc,char *argv[])
 			for(i=0;i<N;i++) {
 				x=(bodies[i].x-xmin)*unit;
 				y=(bodies[i].y-ymin)*unit;
-				if(x>0&&x<Length&&y>0&&y<Length)
+				if(x>0&&x<x11Length&&y>0&&y<x11Length)
 					draw(x,y);
 			}
 			XFlush(display);
