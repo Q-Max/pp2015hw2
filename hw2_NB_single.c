@@ -88,7 +88,7 @@ int main(int argc,char *argv[])
 	const double t = atof(argv[4]);
 	const char *filename = argv[5];
 	const double theta = atof(argv[6]);
-  const double unit;
+	const double unit;
 	int enableX11;
 	int xmin, ymin, length, x11Length;
 	int acc_t;
@@ -109,6 +109,7 @@ int main(int argc,char *argv[])
 		ymin = atoi(argv[9]);
 		length = atoi(argv[10]);
 		x11Length = atoi(argv[11]);
+		unit = x11Length/length;
 	}
 	int i, x, y;
 	if(enableX11)initGraph(x11Length, x11Length);
