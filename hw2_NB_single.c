@@ -88,7 +88,7 @@ int main(int argc,char *argv[])
 	const double t = atof(argv[4]);
 	const char *filename = argv[5];
 	const double theta = atof(argv[6]);
-	const double unit;
+	double unit;
 	int enableX11;
 	int xmin, ymin, length, x11Length;
 	int acc_t;
