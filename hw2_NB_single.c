@@ -148,8 +148,7 @@ int main(int argc,char *argv[])
 			bodies[i].vx = vx_new[i]; // update velocity
 			bodies[i].vy = vy_new[i];*/
 		}
-	}
-	if(enableX11){
+   if(enableX11){
     clear(length, length);
 		for(i=0;i<N;i++) {
 			x=(bodies[i].x-xmin)*unit;
@@ -158,8 +157,9 @@ int main(int argc,char *argv[])
 				draw(x,y);
 		}
     XFlush(display);
-  }    
-	sleep(3);
+  }
+	}
+	
 	return 0;
 }
 inline void computeForce(struct body *bodies ,double m, double *Fx, double *Fy, int N){
