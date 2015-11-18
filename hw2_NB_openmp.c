@@ -10,14 +10,16 @@
 #define G 6.67e-11
 
 struct body{
-double x, y, vx, vy;
+	double x, y, vx, vy;
 };
-
+struct point{
+	int x, y;
+};
 void initGraph(int width,int height);
 inline void draw(int x,int y);
 //inline void computeForce(struct body *bodies ,double m, double *x, double *y, int N);
 inline void computeAcce(struct body *bodies, int N);
-inline void clear(int width,int height);
+inline void clear(struct point* points, int N);
 
 GC gc;
 Display *display;
@@ -99,6 +101,7 @@ int main(int argc,char *argv[])
 	//double *Fx, *Fy;
 	int N;
 	struct body *bodies;
+	struct point *points;
 	//*bodies_new;
 	FILE *fp;
 	if(!strcmp(argv[7],"enable"))
@@ -115,6 +118,7 @@ int main(int argc,char *argv[])
 		length = atoi(argv[10]);
 		x11Length = atoi(argv[11]);
 		unit = x11Length/length;
+		points = (struct point*)malloc(sizeof(struct point)*N);
 	}
 	constGM = G * m;
 	int i, x, y;
@@ -146,20 +150,45 @@ int main(int argc,char *argv[])
 			puts("error in file");
 			exit(0);
 		}
+		points[i].x = 1;
+		points[i].y = 1;
 		//printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
 	}
-	for (acc_t=0; acc_t<T; acc_t++) {
+	if(enableX11){
+		for (acc_t=0; acc_t<T; acc_t++) {
+			computeAcce(bodies, N);
+			for (i=0; i<N; i++) {
+				bodies[i].x += bodies[i].vx * t; // compute new position
+				bodies[i].y += bodies[i].vy * t; // compute new position
+			}
+			clear(points, N);
+			for(i=0;i<N;i++){
+				x=(bodies[i].x-xmin)*unit;
+				y=(bodies[i].y-ymin)*unit;
+				if(x>0&&x<x11Length&&y>0&&y<x11Length){
+					draw(x,y);
+					points[i].x = x;
+					points[i].y = y;
+				}
+			}
+			XFlush(display);
+		}
+	}
+	else{
+		for (acc_t=0; acc_t<T; acc_t++) {
+			computeAcce(bodies, N);
+			for (i=0; i<N; i++) {
+				bodies[i].x += bodies[i].vx * t; // compute new position
+				bodies[i].y += bodies[i].vy * t; // compute new position
+			}		
+		}
+	}	
+	/*for (acc_t=0; acc_t<T; acc_t++) {
 		computeAcce(bodies, N);
 		for (i=0; i<N; i++) {
-			//Compute_Force(i); // compute force in O(N^2)
-			//bodies_new[i].vx = bodies[i].vx + (Fx[i] * t / m); // compute new velocity
-			//bodies_new[i].vy = bodies[i].vy + (Fy[i] * t / m); // compute new velocity
 			bodies[i].x += bodies[i].vx * t; // compute new position
 			bodies[i].y += bodies[i].vy * t; // compute new position
 		}
-		/*for(i=0; i<N; i++){
-			bodies[i] = bodies_new[i];
-		}*/
 		if(enableX11){
 			clear(x11Length, x11Length);
 			for(i=0;i<N;i++) {
@@ -170,7 +199,7 @@ int main(int argc,char *argv[])
 			}
 			XFlush(display);
 		}
-	}
+	}*/
 	gettimeofday (&tvalAfter, NULL);
 	tresult.tv_sec = tvalAfter.tv_sec-tvalBefore.tv_sec;
 	tresult.tv_usec = tvalAfter.tv_usec-tvalBefore.tv_usec;
@@ -229,7 +258,13 @@ inline void computeAcce(struct body *bodies, int N){
 		}
 	
 }
-inline void clear(int width,int height) {
-	XSetForeground(display,gc,BlackPixel(display,screen));
-	XFillRectangle(display,window,gc,0,0,width,height);
+inline void clear(struct point *points, int N)
+{
+	/* draw point */
+	int i;
+	for(i=0;i<N;i++){
+		XSetForeground(display,gc,BlackPixel(display,screen));
+		XDrawPoint (display, window, gc, points[i].x, points[i].y);
+	}
+
 }
