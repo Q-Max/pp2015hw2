@@ -3,6 +3,7 @@
 #include<string.h>
 #include<X11/Xlib.h>
 //#include <unistd.h>
+#include<sys/time.h>
 #include<math.h>
 
 #define G 6.67e-11
@@ -142,6 +143,8 @@ int main(int argc,char *argv[])
 		}
 		printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
 	}
+	struct timeval tvalBefore, tvalAfter, tresult;
+	gettimeofday (&tvalBefore, NULL);
 	for (acc_t=0; acc_t<T; acc_t++) {
 		computeAcce(bodies, N);
 		for (i=0; i<N; i++) {
@@ -165,7 +168,14 @@ int main(int argc,char *argv[])
 			XFlush(display);
 		}
 	}
-	
+	gettimeofday (&tvalAfter, NULL);
+	tresult.tv_sec = tvalAfter.tv_sec-tvalBefore.tv_sec;
+    tresult.tv_usec = tvalAfter.tv_usec-tvalBefore.tv_usec;
+    if(tresult.tv_usec<0){
+        tresult.tv_sec--;
+        tresult.tv_usec+=1000000;
+    }
+    printf("Finish at %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
 /*inline void computeForce(struct body *bodies ,double m, double *Fx, double *Fy, int N){
