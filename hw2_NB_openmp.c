@@ -4,6 +4,7 @@
 #include<X11/Xlib.h>
 //#include <unistd.h>
 #include<math.h>
+#include<omp.h>
 
 #define G 6.67e-11
 
@@ -23,6 +24,7 @@ Window window;      //initialization for a window
 int screen;         //which screen 
 double constGM;
 double t;
+int n;
 
 void initGraph(int width,int height)
 {
@@ -72,7 +74,7 @@ inline void draw(int x,int y)
 	XDrawPoint (display, window, gc, x, y);
 }
 
-const double PI = 3.14159;
+//const double PI = 3.14159;
 
 int main(int argc,char *argv[])
 {
@@ -83,7 +85,7 @@ int main(int argc,char *argv[])
 		exit(0);
 
 	}
-	const int n = atoi(argv[1]);
+	n = atoi(argv[1]);
 	const double m = atof(argv[2]);
 	const int T = atoi(argv[3]);
 	t = atof(argv[4]);
@@ -115,6 +117,7 @@ int main(int argc,char *argv[])
 	}
 	constGM = G * m;
 	int i, x, y;
+	omp_set_num_threads(n);
 	if(enableX11)initGraph(x11Length, x11Length);
 	/*for( i = 0; i < 100; i++ )
 		draw((int)((200*cos(i/100.0*2*PI))+250), 250+(int)(200*sin(i/100.0*2*PI)));
@@ -140,7 +143,7 @@ int main(int argc,char *argv[])
 			puts("error in file");
 			exit(0);
 		}
-		printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
+		//printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
 	}
 	for (acc_t=0; acc_t<T; acc_t++) {
 		computeAcce(bodies, N);
@@ -192,25 +195,29 @@ int main(int argc,char *argv[])
 inline void computeAcce(struct body *bodies, int N){
 	int i, j;
 	double axt, ayt, r;
-	for(i=0;i<N;i++){
-		axt=0;
-		ayt=0;
-		for(j=0;j<N;j++){
-			if(i==j)
-				continue;
-			r =  (bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y);
-			if(r==0)
-				puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
-			else{
-				axt += (constGM * (bodies[j].x-bodies[i].x) / (r * sqrt(r)));
-				ayt += (constGM * (bodies[j].y-bodies[i].y) / (r * sqrt(r)));
+	#pragma omp parallel for private(axt,ayt,r,i,j)
+	
+		for(i=0;i<N;i++){
+			axt=0;
+			ayt=0;
+			//#pragma omp parallel for
+			for(j=0;j<N;j++){
+				if(i==j)
+					continue;
+				r = (bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y);
+				if(r==0)
+					puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
+				else{
+					axt += (constGM * (bodies[j].x-bodies[i].x) / (r * sqrt(r)));
+					ayt += (constGM * (bodies[j].y-bodies[i].y) / (r * sqrt(r)));
+				}
 			}
-		}
-		bodies[i].vx += axt * t;
-		bodies[i].vy += ayt * t;
+			bodies[i].vx += axt * t;
+			bodies[i].vy += ayt * t;
 		/*Fx[i] = fxt;
 		Fy[i] = fyt;*/
-	}
+		}
+	
 }
 inline void clear(int width,int height) {
 	XSetForeground(display,gc,BlackPixel(display,screen));
