@@ -113,7 +113,8 @@ int main(int argc,char *argv[])
 		x11Length = atoi(argv[11]);
 		unit = x11Length/length;
 		initGraph(x11Length, x11Length);
-		points = (struct point*)malloc(sizeof(struct point)*N);
+		
+		
 	}
 	constGM = G * m;
 	int i, x, y;
@@ -126,14 +127,19 @@ int main(int argc,char *argv[])
 		puts("error in file");
 		exit(0);
 	}
+	if(enableX11){
+		points = (struct point*)malloc(sizeof(struct point)*N);
+		for (i=0; i<N; i++){
+			points[i].x = 1;
+			points[i].y = 1;
+		}
+	}
 	bodies = (struct body*)malloc(sizeof(struct body)*N);
 	for (i=0; i<N; i++){
 		if(!fscanf(fp,"%lf %lf %lf %lf",&bodies[i].x, &bodies[i].y, &bodies[i].vx, &bodies[i].vy)){
 			puts("error in file");
 			exit(0);
 		}
-		points[i].x = 1;
-		points[i].y = 1;
 		//printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
 	}
 	struct timeval tvalBefore, tvalAfter, tresult;
