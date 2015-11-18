@@ -20,9 +20,10 @@ struct slice{
 };
 inline void initGraph(int width,int height);
 inline void draw(int x,int y);
-inline void computeAcce();
 inline void clear(struct point* points, int N);
-void *worker(void* arg);
+void *workAcc(void* arg);
+void *workPoi(void* arg);
+void *workDraw(void* arg);
 
 GC gc;
 Display *display;
@@ -31,8 +32,10 @@ int screen;         //which screen
 double constGM;
 double t;
 struct body *bodies;
+struct point *points;
 int n, N;
-
+double unit;
+int x11Length, xmin, ymin;
 inline void initGraph(int width,int height)
 {
 	/* open connection with the server */ 
@@ -96,13 +99,15 @@ int main(int argc,char *argv[])
 	t = atof(argv[4]);
 	const char *filename = argv[5];
 	const double theta = atof(argv[6]);
-	double unit = 0;
+	unit = 0;
 	int enableX11;
-	int xmin, ymin, length, x11Length = 0;
-	int acc_t;
-	struct point *points;
+	int length;
+	x11Length = 0;
+	int acc_t;	
 	FILE *fp;
 	struct body *bodies_main;
+	pthread_t threads[n];
+	int load;
 	if(!strcmp(argv[7],"enable"))
 		enableX11 = 1;
 	else if(!strcmp(argv[7],"disable"))
@@ -130,6 +135,7 @@ int main(int argc,char *argv[])
 		puts("error in file");
 		exit(0);
 	}
+	load = N/n;
 	if(enableX11){
 		points = (struct point*)malloc(sizeof(struct point)*N);
 		for (i=0; i<N; i++){
@@ -137,15 +143,11 @@ int main(int argc,char *argv[])
 			points[i].y = 1;
 		}
 	}
-	puts("TT");
-	printf("%d\n",N);
 	bodies_main = (struct body*)malloc(sizeof(struct body)*N);
 	if(bodies_main==NULL){
-		puts("QQQQQQQQQQQ");
 		exit(0);
 	}
 	for (i=0; i<N; i++){
-		puts("QQ");
 		if(!fscanf(fp,"%lf %lf %lf %lf",&bodies_main[i].x, &bodies_main[i].y, &bodies_main[i].vx, &bodies_main[i].vy)){
 			puts("error in file");
 			exit(0);
@@ -154,14 +156,40 @@ int main(int argc,char *argv[])
 	struct timeval tvalBefore, tvalAfter, tresult;
 	gettimeofday (&tvalBefore, NULL);
 	bodies = bodies_main;
+	struct slice *slices = (struct slice*)malloc(sizeof(struct slice)*n);
+	for(i=0;i<n;i++){
+		slices[i].start = load*i;
+		slices[i].end = load*(i+1);
+		//if(reminder!=0)slices[i].end+=1;
+	}
+	slices[i-1].end = load*(i)+N%n;
 	if(enableX11){
 		for (acc_t=0; acc_t<T; acc_t++) {
-			computeAcce();
-			for (i=0; i<N; i++) {
-				bodies[i].x += bodies[i].vx * t; // compute new position
-				bodies[i].y += bodies[i].vy * t; // compute new position
+
+			for(i=0;i<n;i++){
+				pthread_create(&threads[i], NULL, workAcc, (void *) &slices[i]);
 			}
 			clear(points, N);
+			for(i=0;i<n;i++){
+				pthread_join(threads[i], NULL);
+			}
+			for(i=0;i<n;i++){
+				pthread_create(&threads[i], NULL, workPoi, (void *) &slices[i]);
+			}
+			for(i=0;i<n;i++){
+				pthread_join(threads[i], NULL);
+			}
+			/*for (i=0; i<N; i++) {
+				bodies[i].x += bodies[i].vx * t; // compute new position
+				bodies[i].y += bodies[i].vy * t; // compute new position
+			}*/
+			
+			/*for(i=0;i<n;i++){
+				pthread_create(&threads[i], NULL, workDraw, (void *) &slices[i]);
+			}
+			for(i=0;i<n;i++){
+				pthread_join(threads[i], NULL);
+			}*/
 			for(i=0;i<N;i++){
 				x=(bodies[i].x-xmin)*unit;
 				y=(bodies[i].y-ymin)*unit;
@@ -176,11 +204,22 @@ int main(int argc,char *argv[])
 	}
 	else{
 		for (acc_t=0; acc_t<T; acc_t++) {
-			computeAcce();
-			for (i=0; i<N; i++) {
+			for(i=0;i<n;i++){
+				pthread_create(&threads[i], NULL, workAcc, (void *) &slices[i]);
+			}
+			for(i=0;i<n;i++){
+				pthread_join(threads[i], NULL);
+			}
+			for(i=0;i<n;i++){
+				pthread_create(&threads[i], NULL, workPoi, (void *) &slices[i]);
+			}
+			for(i=0;i<n;i++){
+				pthread_join(threads[i], NULL);
+			}
+			/*for (i=0; i<N; i++) {
 				bodies[i].x += bodies[i].vx * t; // compute new position
 				bodies[i].y += bodies[i].vy * t; // compute new position
-			}		
+			}*/
 		}
 	}	
 	gettimeofday (&tvalAfter, NULL);
@@ -193,24 +232,7 @@ int main(int argc,char *argv[])
     printf("Finish at %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
-inline void computeAcce(){
-	puts("WW");
-	pthread_t threads[n];
-	int load = N/n;
-	int i;
-	struct slice *slices = (struct slice*)malloc(sizeof(struct slice)*n);
-	for(i=0;i<n;i++){
-		slices[i].start = load*i;
-		slices[i].end = load*(i+1);
-	}
-	slices[i-1].end = load*(i)+N%n;
-	for(i=0;i<n;i++){
-		pthread_create(&threads[i], NULL, worker, (void *) &slices[i]);
-	}
-	for(i=0;i<n;i++){
-		pthread_join(threads[i], NULL);
-	}
-}
+
 inline void clear(struct point *points, int N)
 {
 	/* draw point */
@@ -221,7 +243,7 @@ inline void clear(struct point *points, int N)
 	}
 
 }
-void *worker(void* arg){
+void *workAcc(void* arg){
 	struct slice *slices = (struct slice*)arg;
 	int i, j;
 	double axt, ayt, r;
@@ -241,6 +263,31 @@ void *worker(void* arg){
 		}
 		bodies[i].vx += axt * t;
 		bodies[i].vy += ayt * t;
+	}
+	pthread_exit(NULL);
+	return NULL;
+}
+void *workPoi(void* arg){
+	struct slice *slices = (struct slice*)arg;
+	int i;
+	for(i=slices->start;i<slices->end;i++){
+		bodies[i].x += bodies[i].vx * t; // compute new position
+		bodies[i].y += bodies[i].vy * t; // compute new position
+	}
+	pthread_exit(NULL);
+	return NULL;	
+}
+void *workDraw(void* arg){
+	struct slice *slices = (struct slice*)arg;
+	int i, x, y;
+	for(i=slices->start;i<slices->end;i++){
+		x=(bodies[i].x-xmin)*unit;
+		y=(bodies[i].y-ymin)*unit;
+		if(x>0&&x<x11Length&&y>0&&y<x11Length){
+			draw(x,y);
+			points[i].x = x;
+			points[i].y = y;
+		}
 	}
 	pthread_exit(NULL);
 	return NULL;
