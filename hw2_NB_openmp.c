@@ -1,14 +1,15 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<X11/Xlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <X11/Xlib.h>
 //#include <unistd.h>
 #include <sys/time.h>
-#include<math.h>
-#include<omp.h>
+#include <math.h>
+#include <float.h>
+#include <omp.h>
 
 #define G 6.67e-11
-
+#define eplison 1e-4
 struct body{
 	double x, y, vx, vy;
 };
@@ -17,7 +18,6 @@ struct point{
 };
 void initGraph(int width,int height);
 inline void draw(int x,int y);
-//inline void computeForce(struct body *bodies ,double m, double *x, double *y, int N);
 inline void computeAcce(struct body *bodies, int N);
 inline void clear(struct point* points, int N);
 
@@ -77,8 +77,6 @@ inline void draw(int x,int y)
 	XDrawPoint (display, window, gc, x, y);
 }
 
-//const double PI = 3.14159;
-
 int main(int argc,char *argv[])
 {
 	if(argc<8||(argc>8&&argc!=12)){
@@ -98,11 +96,9 @@ int main(int argc,char *argv[])
 	int enableX11;
 	int xmin, ymin, length, x11Length = 0;
 	int acc_t;
-	//double *Fx, *Fy;
 	int N;
 	struct body *bodies;
 	struct point *points;
-	//*bodies_new;
 	FILE *fp;
 	if(!strcmp(argv[7],"enable"))
 		enableX11 = 1;
@@ -118,7 +114,7 @@ int main(int argc,char *argv[])
 		length = atoi(argv[10]);
 		x11Length = atoi(argv[11]);
 		unit = x11Length/length;
-		points = (struct point*)malloc(sizeof(struct point)*N);
+		
 	}
 	constGM = G * m;
 	int i, x, y;
@@ -138,11 +134,15 @@ int main(int argc,char *argv[])
 		puts("error in file");
 		exit(0);
 	}
-	//printf("%d\n", N);
+	
+	if(enableX11){
+		points = (struct point*)malloc(sizeof(struct point)*N);
+		for(i=0;i<N;i++){
+			points[i].x = 1;
+			points[i].y = 1;
+		}
+	}
 	bodies = (struct body*)malloc(sizeof(struct body)*N);
-	//bodies_new = (struct body*)malloc(sizeof(struct body)*N);
-	//Fx = (double*)malloc(sizeof(double)*N);
-	//Fy = (double*)malloc(sizeof(double)*N);
 	struct timeval tvalBefore, tvalAfter, tresult;
 	gettimeofday (&tvalBefore, NULL);
 	for (i=0; i<N; i++){
@@ -150,18 +150,18 @@ int main(int argc,char *argv[])
 			puts("error in file");
 			exit(0);
 		}
-		points[i].x = 1;
-		points[i].y = 1;
-		//printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
+
 	}
 	if(enableX11){
 		for (acc_t=0; acc_t<T; acc_t++) {
 			computeAcce(bodies, N);
+			#pragma  omp parallel for schedule(guided, 100) private(i)
 			for (i=0; i<N; i++) {
 				bodies[i].x += bodies[i].vx * t; // compute new position
 				bodies[i].y += bodies[i].vy * t; // compute new position
 			}
 			clear(points, N);
+			//#pragma  omp parallel for schedule(guided, 100) private(i,x,y)
 			for(i=0;i<N;i++){
 				x=(bodies[i].x-xmin)*unit;
 				y=(bodies[i].y-ymin)*unit;
@@ -177,29 +177,13 @@ int main(int argc,char *argv[])
 	else{
 		for (acc_t=0; acc_t<T; acc_t++) {
 			computeAcce(bodies, N);
+			#pragma  omp parallel for schedule(guided, 100) private(i)
 			for (i=0; i<N; i++) {
 				bodies[i].x += bodies[i].vx * t; // compute new position
 				bodies[i].y += bodies[i].vy * t; // compute new position
-			}		
-		}
-	}	
-	/*for (acc_t=0; acc_t<T; acc_t++) {
-		computeAcce(bodies, N);
-		for (i=0; i<N; i++) {
-			bodies[i].x += bodies[i].vx * t; // compute new position
-			bodies[i].y += bodies[i].vy * t; // compute new position
-		}
-		if(enableX11){
-			clear(x11Length, x11Length);
-			for(i=0;i<N;i++) {
-				x=(bodies[i].x-xmin)*unit;
-				y=(bodies[i].y-ymin)*unit;
-				if(x>0&&x<x11Length&&y>0&&y<x11Length)
-					draw(x,y);
 			}
-			XFlush(display);
 		}
-	}*/
+	}
 	gettimeofday (&tvalAfter, NULL);
 	tresult.tv_sec = tvalAfter.tv_sec-tvalBefore.tv_sec;
 	tresult.tv_usec = tvalAfter.tv_usec-tvalBefore.tv_usec;
@@ -210,31 +194,10 @@ int main(int argc,char *argv[])
 	printf("Finish at %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
-/*inline void computeForce(struct body *bodies ,double m, double *Fx, double *Fy, int N){
-	int i, j;
-	double fxt, fyt, r;
-	for(i=0;i<N;i++){
-		fxt=0;
-		fyt=0;
-		for(j=0;j<N;j++){
-			if(i==j)
-				continue;
-			r = sqrt( (bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y) );
-			if(r==0)
-				puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
-			else{
-				fxt += (constGMM * (bodies[j].x-bodies[i].x) / (r * r * r));
-				fyt += (constGMM * (bodies[j].y-bodies[i].y) / (r * r * r));
-			}
-		}
-		Fx[i] = fxt;
-		Fy[i] = fyt;
-	}
-}*/
 inline void computeAcce(struct body *bodies, int N){
 	int i, j;
-	double axt, ayt, r;
-	#pragma omp parallel for private(axt,ayt,r,i,j)
+	double axt, ayt, r, a;
+	#pragma omp parallel for private(axt,ayt,r,i,j,a)
 	
 		for(i=0;i<N;i++){
 			axt=0;
@@ -243,24 +206,39 @@ inline void computeAcce(struct body *bodies, int N){
 			for(j=0;j<N;j++){
 				if(i==j)
 					continue;
-				r = (bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y);
-				if(r==0)
+				r = sqrt((bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y));
+				/*if(r==0)
 					puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
-				else{
-					axt += (constGM * (bodies[j].x-bodies[i].x) / (r * sqrt(r)));
-					ayt += (constGM * (bodies[j].y-bodies[i].y) / (r * sqrt(r)));
-				}
+				else{*/
+					//t = (((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
+					/*if(t==-INFINITY)
+						t = LDBL_MIN;
+					else if(t==INFINITY)
+						t = LDBL_MAX;*/
+					//axt += t;
+					axt += constGM * (bodies[j].x-bodies[i].x) / (r*r*r+eplison);
+				//(((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
+					//t = (((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);
+					/*if(t==-INFINITY)
+						t = LDBL_MIN;
+					else if(t==INFINITY)
+						t = LDBL_MAX;*/
+					//ayt += t;
+					ayt += constGM * (bodies[j].y-bodies[i].y) / (r*r*r+eplison);
+				//(((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);
+				//}
+				/*r=(bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x)+(bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y)+6e-4;
+				a=constGM/r;
+				axt+=a*(bodies[j].x-bodies[i].x)/sqrt(r);
+				ayt+=a*(bodies[j].y-bodies[i].y)/sqrt(r);*/
 			}
 			bodies[i].vx += axt * t;
 			bodies[i].vy += ayt * t;
-		/*Fx[i] = fxt;
-		Fy[i] = fyt;*/
 		}
 	
 }
 inline void clear(struct point *points, int N)
 {
-	/* draw point */
 	int i;
 	for(i=0;i<N;i++){
 		XSetForeground(display,gc,BlackPixel(display,screen));

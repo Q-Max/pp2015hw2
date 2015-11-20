@@ -6,6 +6,7 @@
 //#include <unistd.h>
 #include <sys/time.h>
 #include <math.h>
+#include <float.h>
 
 #define G 6.67e-11
 
@@ -246,20 +247,36 @@ inline void clear(struct point *points, int N)
 void *workAcc(void* arg){
 	struct slice *slices = (struct slice*)arg;
 	int i, j;
-	double axt, ayt, r;
+	double axt, ayt, r, a;
 	for(i=slices->start;i<slices->end;i++){
 		axt=0;
 		ayt=0;
 		for(j=0;j<N;j++){
 			if(i==j)
 				continue;
-			r =  (bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y);
+			/*r =  sqrt((bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y));
 			if(r==0)
 				puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
-			else{
-				axt += (constGM * (bodies[j].x-bodies[i].x) / (r * sqrt(r)));
-				ayt += (constGM * (bodies[j].y-bodies[i].y) / (r * sqrt(r)));
-			}
+			else{*/
+				/*t2 = (((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
+				if(t2==-INFINITY)
+					t2 = LDBL_MIN;
+				else if(t2==INFINITY)
+					t2 = LDBL_MAX;
+				axt += t2;
+				t2 = (((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);
+				if(t2==-INFINITY)
+					t2 = LDBL_MIN;
+				else if(t2==INFINITY)
+					t2 = LDBL_MAX;
+				ayt += t2;*/
+			/*	axt += (((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
+				ayt += (((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);
+			}*/
+			r=(bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x)+(bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y)+1e-5;
+			a=constGM/r;
+			axt+=a*(bodies[j].x-bodies[i].x)/sqrt(r);
+			ayt+=a*(bodies[j].y-bodies[i].y)/sqrt(r);
 		}
 		bodies[i].vx += axt * t;
 		bodies[i].vy += ayt * t;

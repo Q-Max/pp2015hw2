@@ -1,10 +1,11 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<string.h>
-#include<X11/Xlib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <X11/Xlib.h>
+#include <float.h>
 //#include <unistd.h>
-#include<sys/time.h>
-#include<math.h>
+#include <sys/time.h>
+#include <math.h>
 
 #define G 6.67e-11
 
@@ -185,20 +186,36 @@ int main(int argc,char *argv[])
 }
 inline void computeAcce(struct body *bodies, int N){
 	int i, j;
-	double axt, ayt, r;
+	double axt, ayt, r, a;
 	for(i=0;i<N;i++){
 		axt=0;
 		ayt=0;
 		for(j=0;j<N;j++){
 			if(i==j)
 				continue;
-			r =  (bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y);
+			/*r =  sqrt((bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y));
 			if(r==0)
 				puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
 			else{
-				axt += (constGM * (bodies[j].x-bodies[i].x) / (r * sqrt(r)));
-				ayt += (constGM * (bodies[j].y-bodies[i].y) / (r * sqrt(r)));
-			}
+				t2 = (((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
+				if(t2==-INFINITY)
+					t2 = DBL_MIN;
+				else if(t2==INFINITY)
+					t2 = DBL_MAX;
+				axt += t2;
+				t2 = (((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);
+				if(t2==-INFINITY)
+					t2 = DBL_MIN;
+				else if(t2==INFINITY)
+					t2 = DBL_MAX;
+				ayt += t2;*/
+				/*axt += (((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
+				ayt += (((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);*/
+			//}
+			r=(bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x)+(bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y)+1e-5;
+			a=constGM/r;
+			axt+=a*(bodies[j].x-bodies[i].x)/sqrt(r);
+			ayt+=a*(bodies[j].y-bodies[i].y)/sqrt(r);
 		}
 		bodies[i].vx += axt * t;
 		bodies[i].vy += ayt * t;
