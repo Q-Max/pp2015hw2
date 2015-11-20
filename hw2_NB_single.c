@@ -8,6 +8,7 @@
 #include <math.h>
 
 #define G 6.67e-11
+#define EPSILON 2e-5
 
 struct body{
 	double x, y, vx, vy;
@@ -84,15 +85,17 @@ int main(int argc,char *argv[])
 		exit(0);
 
 	}
-	const int n = atoi(argv[1]);
+	//const int n = atoi(argv[1]);
 	const double m = atof(argv[2]);
 	const int T = atoi(argv[3]);
 	t = atof(argv[4]);
 	const char *filename = argv[5];
-	const double theta = atof(argv[6]);
-	double unit = 0;
+	//const double theta = atof(argv[6]);
+	double unit, length = 0;
 	int enableX11;
-	int xmin, ymin, length, x11Length = 0;
+	double xmin, ymin;
+	unit = xmin = ymin = 0;
+	int x11Length = 0;
 	int acc_t;
 	int N;
 	struct body *bodies;
@@ -108,9 +111,9 @@ int main(int argc,char *argv[])
 		exit(0);
 	}
 	if(enableX11){
-		xmin = atoi(argv[8]);
-		ymin = atoi(argv[9]);
-		length = atoi(argv[10]);
+		xmin = atof(argv[8]);
+		ymin = atof(argv[9]);
+		length = atof(argv[10]);
 		x11Length = atoi(argv[11]);
 		unit = x11Length/length;
 		initGraph(x11Length, x11Length);
@@ -186,13 +189,16 @@ int main(int argc,char *argv[])
 }
 inline void computeAcce(struct body *bodies, int N){
 	int i, j;
-	double axt, ayt, r, a;
+	double axt, ayt, r;
 	for(i=0;i<N;i++){
 		axt=0;
 		ayt=0;
 		for(j=0;j<N;j++){
 			if(i==j)
 				continue;
+			r = sqrt((bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y));
+			axt += constGM * (bodies[j].x-bodies[i].x) / (r*r*r+EPSILON);
+			ayt += constGM * (bodies[j].y-bodies[i].y) / (r*r*r+EPSILON);
 			/*r =  sqrt((bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y));
 			if(r==0)
 				puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
@@ -212,10 +218,10 @@ inline void computeAcce(struct body *bodies, int N){
 				/*axt += (((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
 				ayt += (((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);*/
 			//}
-			r=(bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x)+(bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y)+1e-5;
+			/*r=(bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x)+(bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y)+1e-5;
 			a=constGM/r;
 			axt+=a*(bodies[j].x-bodies[i].x)/sqrt(r);
-			ayt+=a*(bodies[j].y-bodies[i].y)/sqrt(r);
+			ayt+=a*(bodies[j].y-bodies[i].y)/sqrt(r);*/
 		}
 		bodies[i].vx += axt * t;
 		bodies[i].vy += ayt * t;
