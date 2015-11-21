@@ -5,10 +5,10 @@ clean:
 all:
 	$(CC) hw2_NB_single.c -o hw2_NB_single $(CFLAGS)
 	$(CC) hw2_NB_openmp.c -o hw2_NB_openmp $(CFLAGS) -fopenmp
-	$(CC) hw2_NB_pthread.c -o hw2_NB_pthread $(CFLAGS) -lpthread
+	$(CC) hw2_NB_pthread.c -o hw2_NB_pthread $(CFLAGS) -pthread
 single:
 	$(CC) hw2_NB_single.c -o hw2_NB_single $(CFLAGS)
 pthread:
-	$(CC) hw2_NB_pthread.c -o hw2_NB_pthread $(CFLAGS) -lpthread
+	$(CC) hw2_NB_pthread.c -o hw2_NB_pthread $(CFLAGS) -pthread
 openmp:
 	$(CC) hw2_NB_openmp.c -o hw2_NB_openmp $(CFLAGS) -fopenmp

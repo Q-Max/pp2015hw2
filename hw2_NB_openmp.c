@@ -9,7 +9,7 @@
 #include <omp.h>
 
 #define G 6.67e-11
-#define EPSILON 2e-5
+#define EPSILON 1e-7
 struct body{
 	double x, y, vx, vy;
 };
@@ -116,17 +116,11 @@ int main(int argc,char *argv[])
 		length = atof(argv[10]);
 		x11Length = atoi(argv[11]);
 		unit = x11Length/length;
-		
+		initGraph(x11Length, x11Length);
 	}
 	constGM = G * m;
 	int i, x, y;
 	omp_set_num_threads(n);
-	if(enableX11)initGraph(x11Length, x11Length);
-	/*for( i = 0; i < 100; i++ )
-		draw((int)((200*cos(i/100.0*2*PI))+250), 250+(int)(200*sin(i/100.0*2*PI)));
-	for( i = 0; i < 50; i++)
-		draw((int)((100*cos(i/50.0*2*PI))+250), 250+(int)(100*sin(i/50.0*2*PI)));*/
-	
 	fp = fopen(filename, "r");
 	if(fp==NULL){
 		puts("file error, EXIT");
