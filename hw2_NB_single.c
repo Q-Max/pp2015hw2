@@ -78,6 +78,9 @@ inline void draw(int x,int y)
 
 int main(int argc,char *argv[])
 {
+	struct timeval tvalBefore, tvalAfter, tresult;
+	struct timeval iobefore, ioafter, ioresult;
+	gettimeofday (&tvalBefore, NULL);
 	if(argc<8||(argc>8&&argc!=12)){
 		puts("error in arguments");
 		puts("\"./hw2_xxx #threads m T t FILE theta disable\" or");
@@ -101,6 +104,7 @@ int main(int argc,char *argv[])
 	struct body *bodies;
 	struct point *points;
 	FILE *fp;
+	
 
 	if(!strcmp(argv[7],"enable"))
 		enableX11 = 1;
@@ -122,6 +126,7 @@ int main(int argc,char *argv[])
 	}
 	constGM = G * m;
 	int i, x, y;
+	gettimeofday (&iobefore, NULL);
 	fp = fopen(filename, "r");
 	if(fp==NULL){
 		puts("file error, EXIT");
@@ -131,6 +136,8 @@ int main(int argc,char *argv[])
 		puts("error in file");
 		exit(0);
 	}
+	
+	printf("%d testcases in  testfile\n", N);
 	if(enableX11){
 		points = (struct point*)malloc(sizeof(struct point)*N);
 		for (i=0; i<N; i++){
@@ -146,8 +153,13 @@ int main(int argc,char *argv[])
 		}
 		//printf("%lf %lf %lf %lf\n", bodies[i].x, bodies[i].y, bodies[i].vx, bodies[i].vy);
 	}
-	struct timeval tvalBefore, tvalAfter, tresult;
-	gettimeofday (&tvalBefore, NULL);
+	gettimeofday (&ioafter, NULL);
+	ioresult.tv_sec = ioafter.tv_sec-iobefore.tv_sec;
+    ioresult.tv_usec = ioafter.tv_usec-iobefore.tv_usec;
+    while(ioresult.tv_usec<0){
+        ioresult.tv_sec--;
+        ioresult.tv_usec+=1000000;
+    }
 	if(enableX11){
 		for (acc_t=0; acc_t<T; acc_t++) {
 			computeAcce(bodies, N);
@@ -184,7 +196,8 @@ int main(int argc,char *argv[])
         tresult.tv_sec--;
         tresult.tv_usec+=1000000;
     }
-    printf("Finish at %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
+    printf("IO cost %ld sec %ld millisec.\n", (ioresult.tv_sec), (ioresult.tv_usec)/1000);
+    printf("Total cost %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
 inline void computeAcce(struct body *bodies, int N){

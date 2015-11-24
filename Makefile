@@ -15,3 +15,5 @@ openmp:
 	$(CC) hw2_NB_openmp.c -o hw2_NB_openmp $(CFLAGS) -fopenmp
 BHalgo:
 	$(CC) hw2_NB_BHalgo.c -o hw2_NB_BHalgo $(CFLAGS) -pthread
+BHalgoGrid:
+	$(CC) hw2_NB_BHalgo.c -o hw2_NB_BHalgo $(CFLAGS) -pthread -Dgrid

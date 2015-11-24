@@ -79,6 +79,9 @@ inline void draw(int x,int y)
 
 int main(int argc,char *argv[])
 {
+	struct timeval tvalBefore, tvalAfter, tresult;
+	struct timeval iobefore, ioafter, ioresult;
+	gettimeofday (&tvalBefore, NULL);
 	if(argc<8||(argc>8&&argc!=12)){
 		puts("error in arguments");
 		puts("\"./hw2_xxx #threads m T t FILE theta disable\" or");
@@ -121,6 +124,7 @@ int main(int argc,char *argv[])
 	constGM = G * m;
 	int i, x, y;
 	omp_set_num_threads(n);
+	gettimeofday (&iobefore, NULL);
 	fp = fopen(filename, "r");
 	if(fp==NULL){
 		puts("file error, EXIT");
@@ -130,7 +134,7 @@ int main(int argc,char *argv[])
 		puts("error in file");
 		exit(0);
 	}
-	
+	printf("%d testcases in  testfile\n", N);
 	if(enableX11){
 		points = (struct point*)malloc(sizeof(struct point)*N);
 		for(i=0;i<N;i++){
@@ -139,15 +143,16 @@ int main(int argc,char *argv[])
 		}
 	}
 	bodies = (struct body*)malloc(sizeof(struct body)*N);
-	struct timeval tvalBefore, tvalAfter, tresult;
-	gettimeofday (&tvalBefore, NULL);
+	
 	for (i=0; i<N; i++){
 		if(!fscanf(fp,"%lf %lf %lf %lf",&bodies[i].x, &bodies[i].y, &bodies[i].vx, &bodies[i].vy)){
 			puts("error in file");
 			exit(0);
 		}
-
 	}
+	gettimeofday (&ioafter, NULL);
+	ioresult.tv_sec = ioafter.tv_sec-iobefore.tv_sec;
+    ioresult.tv_usec = ioafter.tv_usec-iobefore.tv_usec;
 	if(enableX11){
 		for (acc_t=0; acc_t<T; acc_t++) {
 			computeAcce(bodies, N);
@@ -187,14 +192,14 @@ int main(int argc,char *argv[])
 		tresult.tv_sec--;
 		tresult.tv_usec+=1000000;
 	}
-	printf("Finish at %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
+	printf("IO cost %ld sec %ld millisec.\n", (ioresult.tv_sec), (ioresult.tv_usec)/1000);
+	printf("Total cost %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
 inline void computeAcce(struct body *bodies, int N){
 	int i, j;
 	double axt, ayt, r;
-	#pragma omp parallel for private(axt,ayt,r,i,j)
-	
+	#pragma omp parallel for private(axt,ayt,r,i,j)	schedule(guided, 100)
 		for(i=0;i<N;i++){
 			axt=0;
 			ayt=0;
@@ -203,30 +208,8 @@ inline void computeAcce(struct body *bodies, int N){
 				if(i==j)
 					continue;
 				r = sqrt((bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y));
-				/*if(r==0)
-					puts("OAQQQQQQQQQQQQQQQQQQQQQQQQQ");
-				else{*/
-					//t = (((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
-					/*if(t==-INFINITY)
-						t = LDBL_MIN;
-					else if(t==INFINITY)
-						t = LDBL_MAX;*/
-					//axt += t;
-					axt += constGM * (bodies[j].x-bodies[i].x) / (r*r*r+EPSILON);
-				//(((constGM * (bodies[j].x-bodies[i].x) / r) / r) / r);
-					//t = (((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);
-					/*if(t==-INFINITY)
-						t = LDBL_MIN;
-					else if(t==INFINITY)
-						t = LDBL_MAX;*/
-					//ayt += t;
-					ayt += constGM * (bodies[j].y-bodies[i].y) / (r*r*r+EPSILON);
-				//(((constGM * (bodies[j].y-bodies[i].y) / r) / r) / r);
-				//}
-				/*r=(bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x)+(bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y)+6e-4;
-				a=constGM/r;
-				axt+=a*(bodies[j].x-bodies[i].x)/sqrt(r);
-				ayt+=a*(bodies[j].y-bodies[i].y)/sqrt(r);*/
+				axt += constGM * (bodies[j].x-bodies[i].x) / (r*r*r+EPSILON);
+				ayt += constGM * (bodies[j].y-bodies[i].y) / (r*r*r+EPSILON);
 			}
 			bodies[i].vx += axt * t;
 			bodies[i].vy += ayt * t;

@@ -189,20 +189,20 @@ void buildTree(node *p, double x, double y, double d, double x_body, double y_bo
 	return;
 }
 inline void delTree(node *p){
-	if(p->tl!=NULL){
+	if(p->tl){
 		delTree(p->tl);
 	
 		//puts("tl");
 	}
-	if(p->tr!=NULL){
+	if(p->tr){
 		delTree(p->tr);
 		//puts("tr");
 	}
-	if(p->bl!=NULL){
+	if(p->bl){
 		delTree(p->bl);
 		//puts("bl");
 	}
-	if(p->br!=NULL){
+	if(p->br){
 		delTree(p->br);
 		//puts("br");
 	}
@@ -212,29 +212,15 @@ inline void delTree(node *p){
 }
 
 void drawTree(node *p){
-	/*if(p==NULL){
-		puts("QQqqqqqqq");
-	}
-	puts("in");*/
-	if(p->tl!=NULL){
-		/*puts("WWWW");
-		printf("p->tl %u\n", p->tl->count);*/
-		drawTree(p->tl);
-	}
-	//puts("tl");
-	if(p->tr!=NULL)drawTree(p->tr);
-	//puts("tr");
-	if(p->bl!=NULL)drawTree(p->bl);
-	//puts("bl");
-	if(p->br!=NULL)drawTree(p->br);
-	//puts("br");
-	//puts("QQ");
+	if(p->tl)drawTree(p->tl);
+	if(p->tr)drawTree(p->tr);
+	if(p->bl)drawTree(p->bl);
+	if(p->br)drawTree(p->br);
 	if(p->count){
-		//printf("%d %d %d %u\n", (int)(((p->x-xmin)*unit)), (int)(((p->y-ymin)*unit)), (int)(p->d+1), p->count);
 		if((int)(((p->x-xmin)*unit)) > 0 && (int)(((p->y-ymin)*unit)) > 0 && (int)(p->d*unit) > 0)
 			XDrawRectangle( display, window, gc, (int)(((p->x-xmin)*unit)), (int)(((p->y-ymin)*unit)), (int)(p->d*unit), (int)(p->d*unit));
 	}
-	//puts("GG");
+
 	return;
 }
 void initGraph(int width,int height)
@@ -287,6 +273,11 @@ inline void draw(int x,int y)
 
 int main(int argc,char *argv[])
 {
+	struct timeval tvalBefore, tvalAfter, tresult;
+	struct timeval iobefore, ioafter, ioresult;
+	struct timeval buildtreebefore, buildtreeafter, buildtreeresult;
+	buildtreeresult.tv_sec = buildtreeresult.tv_usec = 0;
+	gettimeofday (&tvalBefore, NULL);
 	if(argc<8||(argc>8&&argc!=12)){
 		puts("error in arguments");
 		puts("\"./hw2_xxx #threads m T t FILE theta disable\" or");
@@ -309,14 +300,14 @@ int main(int argc,char *argv[])
 	FILE *fp;	
 	pthread_t threads[n];
 
-	struct timeval tvalBefore, tvalAfter, tresult;
+
 	int reminder;
 	int *tids;
 	node *oldroot = NULL;
 	Colormap screen_colormap;
 	
 	XColor yellow;
-
+	struct acce at;
 	if(!strcmp(argv[7],"enable"))
 		enableX11 = 1;
 	else if(!strcmp(argv[7],"disable"))
@@ -337,6 +328,7 @@ int main(int argc,char *argv[])
 	}
 	constGM = G * m;
 	int i, x, y;
+	gettimeofday (&iobefore, NULL);
 	fp = fopen(filename, "r");
 	if(fp==NULL){
 		puts("file error, EXIT");
@@ -346,7 +338,8 @@ int main(int argc,char *argv[])
 		puts("error in file");
 		exit(0);
 	}
-	gettimeofday (&tvalBefore, NULL);
+	
+	printf("%d testcases in  testfile\n", N);
 	if(enableX11){
 		points = (struct point*)malloc(sizeof(struct point)*N);
 		for (i=0; i<N; i++){
@@ -364,53 +357,58 @@ int main(int argc,char *argv[])
 			exit(0);
 		}
 	}
-	
-	
-
-	if(N>10*n){
-
-		start = (int*)malloc(sizeof(int)*n);
-		end = (int*)malloc(sizeof(int)*n);
-		tids = (int*)malloc(sizeof(int)*n);
-		reminder = N % n;
-		for(i=0;i<n;i++){
-			if(i==0){
-				if(reminder){
-					start[0] = 0;
-					end[0] = (N / n) + 1;
-					reminder--;
-				}
-				else{
-					start[0] = 0;
-					end[0] = (N / n);
-				}
-			}
-			else if(reminder){
-				start[i] = end[i-1];
-				end[i] = start[i] + N / n + 1;
+	gettimeofday (&ioafter, NULL);
+	ioresult.tv_sec = ioafter.tv_sec-iobefore.tv_sec;
+	ioresult.tv_usec = ioafter.tv_usec-iobefore.tv_usec;
+	while(ioresult.tv_usec<0){
+		ioresult.tv_sec--;
+		ioresult.tv_usec+=1000000;
+	}
+	start = (int*)malloc(sizeof(int)*n);
+	end = (int*)malloc(sizeof(int)*n);
+	tids = (int*)malloc(sizeof(int)*n);
+	reminder = N % n;
+	for(i=0;i<n;i++){
+		if(i==0){
+			if(reminder){
+				start[0] = 0;
+				end[0] = (N / n) + 1;
 				reminder--;
 			}
 			else{
-				start[i] = end[i-1];
-				end[i] = start[i] + N / n;
+				start[0] = 0;
+				end[0] = (N / n);
 			}
-			tids[i] = i;
 		}
-
+		else if(reminder){
+			start[i] = end[i-1];
+			end[i] = start[i] + N / n + 1;
+			reminder--;
+		}
+		else{
+			start[i] = end[i-1];
+			end[i] = start[i] + N / n;
+		}
+		tids[i] = i;
+	}
+	if(N>10*n){
 		if(enableX11){
-
 			for (acc_t=0; acc_t<T; acc_t++) {
+				gettimeofday (&buildtreebefore, NULL);
 				if(oldroot!=NULL){
-					/*XSetForeground(display,gc,BlackPixel(display,screen));
-					drawTree(oldroot);*/
+#ifdef grid
+					XSetForeground(display,gc,BlackPixel(display,screen));
+					drawTree(oldroot);
+#endif
 					delTree(oldroot);
 				}
 				root = newNode();
-				//printf("%u\n",(unsigned int)root);
-				//puts("GOOD");
 				findEdges();
 				for(i=0;i<N;i++)
 					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+				gettimeofday (&buildtreeafter, NULL);
+				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
+				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
 				for(i=0;i<n;i++){
 					pthread_create(&threads[i], NULL, workAccBH, (void *) &tids[i]);
 				}
@@ -423,11 +421,7 @@ int main(int argc,char *argv[])
 				for(i=0;i<n;i++){
 					pthread_join(threads[i], NULL);
 				}
-
-				//puts("ff");
 				clear(points, N);
-				/*XSetForeground( display, gc, yellow.pixel);
-				drawTree(root);*/
 				for(i=0;i<N;i++){
 					x=(bodies[i].x-xmin)*unit;
 					y=(bodies[i].y-ymin)*unit;
@@ -437,19 +431,30 @@ int main(int argc,char *argv[])
 						points[i].y = y;
 					}
 				}
-				
+#ifdef grid
+					XSetForeground(display,gc,yellow.pixel);
+					drawTree(root);
+#endif			
 				XFlush(display);
 				oldroot = root;
-				//puts("WWW");
-				//usleep(1000000000);
-				
 			}
 		}
 		else{
 			for (acc_t=0; acc_t<T; acc_t++) {
-				//buildTree();
+				gettimeofday (&buildtreebefore, NULL);
+				if(oldroot!=NULL){
+
+					delTree(oldroot);
+				}
+				root = newNode();
+				findEdges();
+				for(i=0;i<N;i++)
+					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+				gettimeofday (&buildtreeafter, NULL);
+				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
+				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
 				for(i=0;i<n;i++){
-					pthread_create(&threads[i], NULL, workAcc2, (void *) &tids[i]);
+					pthread_create(&threads[i], NULL, workAccBH, (void *) &tids[i]);
 				}
 				for(i=0;i<n;i++){
 					pthread_join(threads[i], NULL);
@@ -460,17 +465,37 @@ int main(int argc,char *argv[])
 				for(i=0;i<n;i++){
 					pthread_join(threads[i], NULL);
 				}
+				oldroot = root;
 			}
 		}
 	}
-	else
-	{
+	else{
+		puts("Using single thread because few testcase #");
 		if(enableX11){
 			for (acc_t=0; acc_t<T; acc_t++) {
-				computeAcce();
-				for (i=0; i<N; i++) {
-					bodies[i].x += bodies[i].vx * t; // compute new position
-					bodies[i].y += bodies[i].vy * t; // compute new position
+				gettimeofday (&buildtreebefore, NULL);
+				if(oldroot!=NULL){
+#ifdef grid
+					XSetForeground(display,gc,BlackPixel(display,screen));
+					drawTree(oldroot);
+#endif
+					delTree(oldroot);
+				}
+				root = newNode();
+				findEdges();
+				for(i=0;i<N;i++)
+					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+				gettimeofday (&buildtreeafter, NULL);
+				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
+				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
+				for(i=0;i<N;i++){
+					at = computeAcce_BH(root, bodies[i].x, bodies[i].y);
+					bodies[i].vx += at.ax * t;
+					bodies[i].vy += at.ay * t;
+				}
+				for(i=0;i<N;i++){
+					bodies[i].x += bodies[i].vx * t;
+					bodies[i].y += bodies[i].vy * t;
 				}
 				clear(points, N);
 				for(i=0;i<N;i++){
@@ -482,28 +507,55 @@ int main(int argc,char *argv[])
 						points[i].y = y;
 					}
 				}
+#ifdef grid
+					XSetForeground(display,gc,yellow.pixel);
+					drawTree(root);
+#endif			
 				XFlush(display);
+				oldroot = root;
 			}
 		}
 		else{
 			for (acc_t=0; acc_t<T; acc_t++) {
-				computeAcce(bodies, N);
-				for (i=0; i<N; i++) {
-					bodies[i].x += bodies[i].vx * t; // compute new position
-					bodies[i].y += bodies[i].vy * t; // compute new position
+				gettimeofday (&buildtreebefore, NULL);
+				if(oldroot!=NULL){
+					delTree(oldroot);
 				}
+				root = newNode();
+				findEdges();
+				for(i=0;i<N;i++)
+					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+				gettimeofday (&buildtreeafter, NULL);
+				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
+				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
+				for(i=0;i<N;i++){
+					at = computeAcce_BH(root, bodies[i].x, bodies[i].y);
+					bodies[i].vx += at.ax * t;
+					bodies[i].vy += at.ay * t;
+				}
+				oldroot = root;
 			}
 		}
 	}
 	
+	while(buildtreeresult.tv_usec<0){
+		buildtreeresult.tv_sec--;
+		buildtreeresult.tv_usec+=1000000;
+	}
+	while(buildtreeresult.tv_usec>1000000){
+		buildtreeresult.tv_sec++;
+		buildtreeresult.tv_usec-=1000000;
+	}
 	gettimeofday (&tvalAfter, NULL);
 	tresult.tv_sec = tvalAfter.tv_sec-tvalBefore.tv_sec;
-    tresult.tv_usec = tvalAfter.tv_usec-tvalBefore.tv_usec;
-    if(tresult.tv_usec<0){
-        tresult.tv_sec--;
-        tresult.tv_usec+=1000000;
-    }
-    printf("Finish at %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
+	tresult.tv_usec = tvalAfter.tv_usec-tvalBefore.tv_usec;
+	if(tresult.tv_usec<0){
+		tresult.tv_sec--;
+		tresult.tv_usec+=1000000;
+	}
+	printf("IO cost %ld sec %ld millisec.\n", (ioresult.tv_sec), (ioresult.tv_usec)/1000);
+	printf("Building tree cost %ld sec %ld millisec.\n", (buildtreeresult.tv_sec), (buildtreeresult.tv_usec)/1000);
+	printf("Total cost %ld sec %ld millisec.\n\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
 
@@ -549,23 +601,6 @@ void *workAccBH(void* arg){
 	}
 	pthread_exit(NULL);
 	return NULL;
-}
-inline void computeAcce(){
-	int i, j;
-	double axt, ayt, r;
-	for(i=0;i<N;i++){
-		axt=0;
-		ayt=0;
-		for(j=0;j<N;j++){
-			if(i==j)
-				continue;
-			r = sqrt((bodies[i].x-bodies[j].x)*(bodies[i].x-bodies[j].x) + (bodies[i].y-bodies[j].y)*(bodies[i].y-bodies[j].y));
-			axt += constGM * (bodies[j].x-bodies[i].x) / (r*r*r+EPSILON);
-			ayt += constGM * (bodies[j].y-bodies[i].y) / (r*r*r+EPSILON);
-		}
-		bodies[i].vx += axt * t;
-		bodies[i].vy += ayt * t;
-	}
 }
 void *workPoi2(void* arg){
 	int tid = *(int*)arg;

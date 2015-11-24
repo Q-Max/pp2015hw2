@@ -91,6 +91,9 @@ inline void draw(int x,int y)
 
 int main(int argc,char *argv[])
 {
+	struct timeval tvalBefore, tvalAfter, tresult;
+	struct timeval iobefore, ioafter, ioresult;
+	gettimeofday (&tvalBefore, NULL);
 	if(argc<8||(argc>8&&argc!=12)){
 		puts("error in arguments");
 		puts("\"./hw2_xxx #threads m T t FILE theta disable\" or");
@@ -115,9 +118,10 @@ int main(int argc,char *argv[])
 	pthread_t threads[n];
 	struct slice *slices;
 	int load;
-	struct timeval tvalBefore, tvalAfter, tresult;
+	
 	int reminder;
 	int *tids;
+	
 	if(!strcmp(argv[7],"enable"))
 		enableX11 = 1;
 	else if(!strcmp(argv[7],"disable"))
@@ -136,6 +140,7 @@ int main(int argc,char *argv[])
 	}
 	constGM = G * m;
 	int i, x, y;
+	gettimeofday (&iobefore, NULL);
 	fp = fopen(filename, "r");
 	if(fp==NULL){
 		puts("file error, EXIT");
@@ -145,6 +150,8 @@ int main(int argc,char *argv[])
 		puts("error in file");
 		exit(0);
 	}
+	
+	printf("%d testcases in  testfile\n", N);
 	if(enableX11){
 		points = (struct point*)malloc(sizeof(struct point)*N);
 		for (i=0; i<N; i++){
@@ -162,10 +169,17 @@ int main(int argc,char *argv[])
 			exit(0);
 		}
 	}
+	gettimeofday (&ioafter, NULL);
+	ioresult.tv_sec = ioafter.tv_sec-iobefore.tv_sec;
+    ioresult.tv_usec = ioafter.tv_usec-iobefore.tv_usec;
+    while(ioresult.tv_usec<0){
+        ioresult.tv_sec--;
+        ioresult.tv_usec+=1000000;
+    }
 	bodies = bodies_main;
 	if(N>10*n){
 		load = N/n;		
-		gettimeofday (&tvalBefore, NULL);
+		
 		start = (int*)malloc(sizeof(int)*n);
 		end = (int*)malloc(sizeof(int)*n);
 		tids = (int*)malloc(sizeof(int)*n);
@@ -262,9 +276,8 @@ int main(int argc,char *argv[])
 	}
 	else
 	{		
-		gettimeofday (&tvalBefore, NULL);
-		if(enableX11){
-			puts("QQ");
+		puts("Using single thread because few testcase #");
+		if(enableX11){			
 			for (acc_t=0; acc_t<T; acc_t++) {
 				computeAcce();
 				for (i=0; i<N; i++) {
@@ -302,7 +315,8 @@ int main(int argc,char *argv[])
         tresult.tv_sec--;
         tresult.tv_usec+=1000000;
     }
-    printf("Finish at %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
+    printf("IO cost %ld sec %ld millisec.\n", (ioresult.tv_sec), (ioresult.tv_usec)/1000);	
+    printf("Total cost %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
 
