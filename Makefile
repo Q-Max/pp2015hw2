@@ -17,3 +17,6 @@ BHalgo:
 	$(CC) hw2_NB_BHalgo.c -o hw2_NB_BHalgo $(CFLAGS) -pthread
 BHalgoGrid:
 	$(CC) hw2_NB_BHalgo.c -o hw2_NB_BHalgo $(CFLAGS) -pthread -Dgrid
+BHpara:
+	$(CC) hw2_NB_BHalgo_parallelBuild.c -o hw2_NB_BHalgo_parallelBuild $(CFLAGS) -pthread
+

@@ -11,7 +11,7 @@
 #define G 6.67e-11
 #define EPSILON 1e-7
 typedef struct nodeStruct{
-	double x, y, d, xc, yc;
+	double x, y, dx, dy, xc, yc;
 	unsigned int count;
 	struct nodeStruct *tl, *tr, *bl, *br;
 } node;
@@ -39,13 +39,19 @@ void *workAcc2(void* arg);
 void *workAccBH(void* arg);
 //void *workPoi(void* arg);
 void *workPoi2(void* arg);
+void *wrapbuild(void* arg);
 //void *workDraw(void* arg);
 inline void findEdges();
 inline node* newNode();
-void buildTree(node *p, double x, double y, double d, double x_body, double y_body);
+void buildTree(node *p, double x, double y, double dx, double dy, double x_body, double y_body);
 inline void delTree(node *p);
-
-void drawTree(node  *p);
+int cmp(const void* a, const void* b);
+int cmp(const void* a, const void* b){
+	//printf("%lf %lf",(*((struct body*)a)).x, (*((struct body*)b)).x);
+	if((*((struct body*)a)).x>(*((struct body*)b)).x)return 1;
+	return -1;
+}
+void drawTree(node *p);
 struct acce computeAcce_BH(node *p, double x, double y);
 
 GC gc;
@@ -60,7 +66,7 @@ int n, N;
 double unit;
 int x11Length;
 double xmin, ymin, theta;
-double xmax_bodies, xmin_bodies, ymax_bodies, ymin_bodies, dmax_bodies;
+double xmax_bodies, xmin_bodies, ymax_bodies, ymin_bodies;
 inline void findEdges(){
 	int i;
 	xmin_bodies = ymin_bodies = 1e20;
@@ -75,10 +81,6 @@ inline void findEdges(){
 		if(bodies[i].y < ymin_bodies)
 			ymin_bodies = bodies[i].y;
 	}
-	if(ymax_bodies-ymin_bodies <xmax_bodies - xmin_bodies)
-		dmax_bodies = xmax_bodies - xmin_bodies;
-	else 
-		dmax_bodies = ymax_bodies - ymin_bodies;
 }
 inline node* newNode(){
 	node* p= (node*)malloc(sizeof(node));
@@ -86,18 +88,22 @@ inline node* newNode(){
 	p->tl = p->tr = p->bl = p->br = NULL;
 	return p;
 }
-void buildTree(node *p, double x, double y, double d, double x_body, double y_body){
+void buildTree(node *p, double x, double y, double dx, double dy, double x_body, double y_body){
 	//printf("%u\n",(unsigned int)p);
+	//pthread_mutex_lock(&(p->mutex));
+	double xc, yc;
 	if(p == NULL)
 		puts("QQ");
-	if(p->count==0){		
+	if(p->count==0){
 		p->x = x;
 		p->y = y;
 		p->xc = x_body;
 		p->yc = y_body;
-		p->d = d;
+		p->dx = dx;
+		p->dy = dy;
 		p->count = 1;
 		p->tl = p->tr = p->bl = p->br = NULL;
+		//pthread_mutex_unlock(&(p->mutex));
 		return;
 	}
 	else if(p->count==1){
@@ -119,30 +125,40 @@ void buildTree(node *p, double x, double y, double d, double x_body, double y_bo
 				buildTree(p->br, p->x + (p->d)/2, p->y + (p->d)/2, (p->d)/2, p->xc, p->yc);
 			}
 		}*/
-		if(p->xc < p->x + (p->d)/2){
-			if(p->yc < p->y + (p->d)/2){
-				p->tl = newNode();
-				buildTree(p->tl, p->x, p->y, (p->d)/2, p->xc, p->yc);
+		xc = p->xc;
+		yc = p->yc;
+		p->xc = p->xc * p->count / (p->count+1) + x_body / (p->count+1);
+		p->yc = p->yc * p->count / (p->count+1) + y_body / (p->count+1);
+		p->count++;
+		if(xc < p->x + (p->dx)/2){
+			if(yc < p->y + (p->dy)/2){
+				p->tl = newNode();				
+				buildTree(p->tl, p->x, p->y, (p->dx)/2, (p->dy)/2, xc, yc);
 			}
 			else{
 				p->bl = newNode();
-				buildTree(p->bl, p->x, p->y + (p->d)/2, (p->d)/2, p->xc, p->yc);
+				buildTree(p->bl, p->x, p->y + (p->dy)/2, (p->dx)/2, (p->dy)/2, xc, yc);
 			}
 		}
 		else {
-			if(p->yc < p->y + (p->d)/2){
-				p->tr = newNode();
-				buildTree(p->tr, p->x + (p->d)/2, p->y, (p->d)/2, p->xc, p->yc);
+			if(yc < p->y + (p->dy)/2){
+				p->tr = newNode();				
+				buildTree(p->tr, p->x + (p->dx)/2, p->y, (p->dx)/2, (p->dy)/2, xc, yc);
 			}
 			else{
 				p->br = newNode();
-				buildTree(p->br, p->x + (p->d)/2, p->y + (p->d)/2, (p->d)/2, p->xc, p->yc);
+				buildTree(p->br, p->x + (p->dx)/2, p->y + (p->dy)/2, (p->dx)/2, (p->dy)/2, xc, yc);
 			}
 		}
 	}
-	p->xc = p->xc * p->count / (p->count+1) + x_body / (p->count+1);
-	p->yc = p->yc * p->count / (p->count+1) + y_body / (p->count+1);
-	p->count++;
+	else{
+		p->xc = p->xc * p->count / (p->count+1) + x_body / (p->count+1);
+		p->yc = p->yc * p->count / (p->count+1) + y_body / (p->count+1);
+		p->count++;
+	}
+	// p->xc = p->xc * p->count / (p->count+1) + x_body / (p->count+1);
+	// p->yc = p->yc * p->count / (p->count+1) + y_body / (p->count+1);
+	// p->count++;
 	/*
 	if(x_body > p->x && x_body <= p->x + (p->d)/2){
 		if(y_body > p->y && y_body <= p->y + (p->d)/2){
@@ -162,28 +178,28 @@ void buildTree(node *p, double x, double y, double d, double x_body, double y_bo
 			buildTree(p->br, p->x + (p->d)/2, p->y + (p->d)/2, (p->d)/2, x_body, y_body);
 		}
 	}*/
-	if(x_body < p->x + (p->d)/2){
-		if(y_body < p->y + (p->d)/2){
-			if(p->tl==NULL)
+	if(x_body < p->x + (p->dx)/2){
+		if(y_body < p->y + (p->dy)/2){
+			if(p->tl)
 				p->tl = newNode();
-			buildTree(p->tl, p->x, p->y, (p->d)/2, x_body, y_body);
+			buildTree(p->tl, p->x, p->y, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
 		else{
-			if(p->bl==NULL)
+			if(p->bl)
 				p->bl = newNode();
-			buildTree(p->bl, p->x, p->y + (p->d)/2, (p->d)/2, x_body, y_body);
+			buildTree(p->bl, p->x, p->y + (p->dy)/2, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
 	}
 	else {
-		if(y_body < p->y + (p->d)/2){
-			if(p->tr==NULL)
+		if(y_body < p->y + (p->dy)/2){
+			if(p->tr)
 				p->tr = newNode();
-			buildTree(p->tr, p->x + (p->d)/2, p->y, (p->d)/2, x_body, y_body);
+			buildTree(p->tr, p->x + (p->dx)/2, p->y, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
 		else{
-			if(p->br==NULL)
+			if(p->br)
 				p->br = newNode();
-			buildTree(p->br, p->x + (p->d)/2, p->y + (p->d)/2, (p->d)/2, x_body, y_body);
+			buildTree(p->br, p->x + (p->dx)/2, p->y + (p->dy)/2, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
 	}
 	return;
@@ -217,8 +233,8 @@ void drawTree(node *p){
 	if(p->bl)drawTree(p->bl);
 	if(p->br)drawTree(p->br);
 	if(p->count){
-		if((int)(((p->x-xmin)*unit)) > 0 && (int)(((p->y-ymin)*unit)) > 0 && (int)(p->d*unit) > 0)
-			XDrawRectangle( display, window, gc, (int)(((p->x-xmin)*unit)), (int)(((p->y-ymin)*unit)), (int)(p->d*unit), (int)(p->d*unit));
+		if((int)(((p->x-xmin)*unit)) > 0 && (int)(((p->y-ymin)*unit)) > 0 && (int)(p->dx*unit) > 0 && (int)(p->dy*unit) > 0)
+			XDrawRectangle( display, window, gc, (int)(((p->x-xmin)*unit)), (int)(((p->y-ymin)*unit)), (int)(p->dx*unit), (int)(p->dy*unit));
 	}
 
 	return;
@@ -364,6 +380,7 @@ int main(int argc,char *argv[])
 		ioresult.tv_sec--;
 		ioresult.tv_usec+=1000000;
 	}
+	//qsort(bodies, N, (sizeof(struct body)), cmp);
 	start = (int*)malloc(sizeof(int)*n);
 	end = (int*)malloc(sizeof(int)*n);
 	tids = (int*)malloc(sizeof(int)*n);
@@ -397,15 +414,15 @@ int main(int argc,char *argv[])
 				gettimeofday (&buildtreebefore, NULL);
 				if(oldroot!=NULL){
 #ifdef grid
-					XSetForeground(display,gc,BlackPixel(display,screen));
-					drawTree(oldroot);
+				XSetForeground(display,gc,BlackPixel(display,screen));
+				XFillRectangle(display,window,gc,1,1,x11Length,x11Length);
 #endif
 					delTree(oldroot);
 				}
 				root = newNode();
 				findEdges();
 				for(i=0;i<N;i++)
-					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+					buildTree(root, xmin_bodies, ymin_bodies, xmax_bodies - xmin_bodies, ymax_bodies - ymin_bodies, bodies[i].x, bodies[i].y);				
 				gettimeofday (&buildtreeafter, NULL);
 				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
 				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
@@ -421,7 +438,10 @@ int main(int argc,char *argv[])
 				for(i=0;i<n;i++){
 					pthread_join(threads[i], NULL);
 				}
+				
+#ifndef grid
 				clear(points, N);
+#endif
 				for(i=0;i<N;i++){
 					x=(bodies[i].x-xmin)*unit;
 					y=(bodies[i].y-ymin)*unit;
@@ -449,7 +469,7 @@ int main(int argc,char *argv[])
 				root = newNode();
 				findEdges();
 				for(i=0;i<N;i++)
-					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+					buildTree(root, xmin_bodies, ymin_bodies, xmax_bodies - xmin_bodies, ymax_bodies - ymin_bodies, bodies[i].x, bodies[i].y);
 				gettimeofday (&buildtreeafter, NULL);
 				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
 				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
@@ -476,15 +496,15 @@ int main(int argc,char *argv[])
 				gettimeofday (&buildtreebefore, NULL);
 				if(oldroot!=NULL){
 #ifdef grid
-					XSetForeground(display,gc,BlackPixel(display,screen));
-					drawTree(oldroot);
+				XSetForeground(display,gc,BlackPixel(display,screen));
+				XFillRectangle(display,window,gc,1,1,x11Length,x11Length);
 #endif
 					delTree(oldroot);
 				}
 				root = newNode();
 				findEdges();
 				for(i=0;i<N;i++)
-					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+					buildTree(root, xmin_bodies, ymin_bodies, xmax_bodies - xmin_bodies, ymax_bodies - ymin_bodies, bodies[i].x, bodies[i].y);
 				gettimeofday (&buildtreeafter, NULL);
 				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
 				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
@@ -497,7 +517,9 @@ int main(int argc,char *argv[])
 					bodies[i].x += bodies[i].vx * t;
 					bodies[i].y += bodies[i].vy * t;
 				}
+#ifndef grid
 				clear(points, N);
+#endif
 				for(i=0;i<N;i++){
 					x=(bodies[i].x-xmin)*unit;
 					y=(bodies[i].y-ymin)*unit;
@@ -508,8 +530,8 @@ int main(int argc,char *argv[])
 					}
 				}
 #ifdef grid
-					XSetForeground(display,gc,yellow.pixel);
-					drawTree(root);
+				XSetForeground(display,gc,yellow.pixel);
+				drawTree(root);
 #endif			
 				XFlush(display);
 				oldroot = root;
@@ -524,7 +546,7 @@ int main(int argc,char *argv[])
 				root = newNode();
 				findEdges();
 				for(i=0;i<N;i++)
-					buildTree(root, xmin_bodies, ymin_bodies, dmax_bodies, bodies[i].x, bodies[i].y);
+					buildTree(root, xmin_bodies, ymin_bodies, xmax_bodies - xmin_bodies, ymax_bodies - ymin_bodies, bodies[i].x, bodies[i].y);
 				gettimeofday (&buildtreeafter, NULL);
 				buildtreeresult.tv_sec += buildtreeafter.tv_sec - buildtreebefore.tv_sec;
 				buildtreeresult.tv_usec += buildtreeafter.tv_usec - buildtreebefore.tv_usec;
@@ -567,7 +589,6 @@ inline void clear(struct point *points, int N)
 		XSetForeground(display,gc,BlackPixel(display,screen));
 		XDrawPoint (display, window, gc, points[i].x, points[i].y);
 	}
-
 }
 void *workAcc2(void* arg){
 	int tid = *(int*)arg;
@@ -614,12 +635,13 @@ void *workPoi2(void* arg){
 }
 struct acce computeAcce_BH(node *p, double x, double y){
 	struct acce at, a1;
+	double d = p->dx>p->dy?p->dx:p->dy;
 	at.ax = at.ay = 0;
 	if(p->xc==x&&p->yc==y){
 		return at;
 	}
 	double r = sqrt((x-p->xc)*(x-p->xc) + (y-p->yc)*(y-p->yc));
-	if(p->d/r<=theta||p->count==1){
+	if(d/r<=theta||p->count==1){
 		at.ax = p->count * constGM * (p->xc - x) / (r*r*r+EPSILON);
 		at.ay = p->count * constGM * (p->yc - y) / (r*r*r+EPSILON);
 		return at;
