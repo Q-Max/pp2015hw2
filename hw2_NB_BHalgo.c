@@ -46,8 +46,7 @@ inline node* newNode();
 void buildTree(node *p, double x, double y, double dx, double dy, double x_body, double y_body);
 inline void delTree(node *p);
 int cmp(const void* a, const void* b);
-int cmp(const void* a, const void* b){
-	//printf("%lf %lf",(*((struct body*)a)).x, (*((struct body*)b)).x);
+int cmp(const void* a, const void* b){	
 	if((*((struct body*)a)).x>(*((struct body*)b)).x)return 1;
 	return -1;
 }
@@ -180,24 +179,24 @@ void buildTree(node *p, double x, double y, double dx, double dy, double x_body,
 	}*/
 	if(x_body < p->x + (p->dx)/2){
 		if(y_body < p->y + (p->dy)/2){
-			if(p->tl)
+			if(!p->tl)
 				p->tl = newNode();
 			buildTree(p->tl, p->x, p->y, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
 		else{
-			if(p->bl)
+			if(!p->bl)
 				p->bl = newNode();
 			buildTree(p->bl, p->x, p->y + (p->dy)/2, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
 	}
 	else {
 		if(y_body < p->y + (p->dy)/2){
-			if(p->tr)
+			if(!p->tr)
 				p->tr = newNode();
 			buildTree(p->tr, p->x + (p->dx)/2, p->y, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
 		else{
-			if(p->br)
+			if(!p->br)
 				p->br = newNode();
 			buildTree(p->br, p->x + (p->dx)/2, p->y + (p->dy)/2, (p->dx)/2, (p->dy)/2, x_body, y_body);
 		}
@@ -205,24 +204,10 @@ void buildTree(node *p, double x, double y, double dx, double dy, double x_body,
 	return;
 }
 inline void delTree(node *p){
-	if(p->tl){
-		delTree(p->tl);
-	
-		//puts("tl");
-	}
-	if(p->tr){
-		delTree(p->tr);
-		//puts("tr");
-	}
-	if(p->bl){
-		delTree(p->bl);
-		//puts("bl");
-	}
-	if(p->br){
-		delTree(p->br);
-		//puts("br");
-	}
-
+	if(p->tl)delTree(p->tl);
+	if(p->tr)delTree(p->tr);
+	if(p->bl)delTree(p->bl);
+	if(p->br)delTree(p->br);
 	free(p);
 	return;
 }
@@ -322,7 +307,7 @@ int main(int argc,char *argv[])
 	node *oldroot = NULL;
 	Colormap screen_colormap;
 	
-	XColor yellow;
+	XColor gray;
 	struct acce at;
 	if(!strcmp(argv[7],"enable"))
 		enableX11 = 1;
@@ -340,7 +325,7 @@ int main(int argc,char *argv[])
 		unit = x11Length/length;
 		initGraph(x11Length, x11Length);
 		screen_colormap = DefaultColormap(display, DefaultScreen(display));
-		XAllocNamedColor(display, screen_colormap, "gray", &yellow, &yellow);
+		XAllocNamedColor(display, screen_colormap, "gray", &gray, &gray);
 	}
 	constGM = G * m;
 	int i, x, y;
@@ -380,7 +365,7 @@ int main(int argc,char *argv[])
 		ioresult.tv_sec--;
 		ioresult.tv_usec+=1000000;
 	}
-	//qsort(bodies, N, (sizeof(struct body)), cmp);
+	qsort(bodies, N, (sizeof(struct body)), cmp);
 	start = (int*)malloc(sizeof(int)*n);
 	end = (int*)malloc(sizeof(int)*n);
 	tids = (int*)malloc(sizeof(int)*n);
@@ -414,8 +399,8 @@ int main(int argc,char *argv[])
 				gettimeofday (&buildtreebefore, NULL);
 				if(oldroot!=NULL){
 #ifdef grid
-				XSetForeground(display,gc,BlackPixel(display,screen));
-				XFillRectangle(display,window,gc,1,1,x11Length,x11Length);
+					XSetForeground(display,gc,BlackPixel(display,screen));
+					XFillRectangle(display,window,gc,1,1,x11Length,x11Length);
 #endif
 					delTree(oldroot);
 				}
@@ -452,7 +437,7 @@ int main(int argc,char *argv[])
 					}
 				}
 #ifdef grid
-					XSetForeground(display,gc,yellow.pixel);
+					XSetForeground(display,gc,gray.pixel);
 					drawTree(root);
 #endif			
 				XFlush(display);
@@ -496,8 +481,8 @@ int main(int argc,char *argv[])
 				gettimeofday (&buildtreebefore, NULL);
 				if(oldroot!=NULL){
 #ifdef grid
-				XSetForeground(display,gc,BlackPixel(display,screen));
-				XFillRectangle(display,window,gc,1,1,x11Length,x11Length);
+					XSetForeground(display,gc,BlackPixel(display,screen));
+					XFillRectangle(display,window,gc,1,1,x11Length,x11Length);
 #endif
 					delTree(oldroot);
 				}
