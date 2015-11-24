@@ -316,7 +316,7 @@ int main(int argc,char *argv[])
         tresult.tv_usec+=1000000;
     }
     printf("IO cost %ld sec %ld millisec.\n", (ioresult.tv_sec), (ioresult.tv_usec)/1000);	
-    printf("Total cost %ld sec %ld millisec.\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
+    printf("Total cost %ld sec %ld millisec.\n\n", (tresult.tv_sec), (tresult.tv_usec)/1000);
 	return 0;
 }
 
