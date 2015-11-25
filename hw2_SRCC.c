@@ -2,15 +2,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <time.h>
 #include <pthread.h>
-
+#include <unistd.h>
 void *passenger(void* arg);
+
 pthread_mutex_t mutex;
 pthread_cond_t cond;
 int np, n, C, T, N, headOfArray, count;
 long long ln;
 int *array;
 int *line;
+struct timeval *back_to_queue;
+
 int main(int argc, char** argv){
 	if(argc<5){
 		puts("execution error, ./hw2_SRCC n C T N");
@@ -27,27 +31,40 @@ int main(int argc, char** argv){
 		puts("n<C");
 		exit(0);
 	}
+ int *tids;
+	srand(time(NULL));
+ back_to_queue = (struct timeval*)malloc(sizeof(struct timeval)*n);
 	array = (int*)malloc(sizeof(int)*n);
 	line = (int*)calloc(0, sizeof(int)*n);
+  tids = (int*)malloc(sizeof(int)*n);
+  for(i=0;i<n;i++)
+	tids[i] = i;
 	pthread_t threads[n];
 	pthread_mutex_init(&mutex, NULL);
 	pthread_cond_init(&cond, NULL);
 	np = 0;
 	ln = 0;
+ long int waittime=0, waitcount=0;
 	headOfArray = 0;
 	gettimeofday (&tvalBefore, NULL);
 	for(i=0;i<n;i++){
-		pthread_create(&threads[i], NULL, passenger, (void *) i);
+		pthread_create(&threads[i], NULL, passenger, (void *) &tids[i]);
 	}
 	while(count<N){
 		while(1){
 			//pthread_mutex_lock(&mutex);
-			gettimeofday (&tvalAfter, NULL);
-			printf("car departures at %ld millisec. ", (tvalAfter.tv_usec-tvalBefore.tv_usec)/1000+1000*(tvalAfter.tv_sec-tvalBefore.tv_sec));
+			
 			if(ln - headOfArray >= C){
+        gettimeofday (&tvalAfter, NULL);
+				printf("car departures at %ld millisec. ", (tvalAfter.tv_usec-tvalBefore.tv_usec)/1000+1000*(tvalAfter.tv_sec-tvalBefore.tv_sec));
+
 				for(i=headOfArray%n,j=0;j<C;j++,i++){
+
 					printf("%d ",array[i%n]);
 					//line[array[i%n]]=0;
+          waitcount++;
+					waittime+=(tvalAfter.tv_usec-back_to_queue[array[i%n]].tv_usec)/1000+1000*(tvalAfter.tv_sec-back_to_queue[array[i%n]].tv_sec);
+                                                                                                                                        //printf("%ld\n", (tvalAfter.tv_usec-back_to_queue[array[i%n]].tv_usec)/1000+1000*(tvalAfter.tv_sec-back_to_queue[array[i%n]].tv_sec));
 				}
 				printf("passengers are in the car\n");
 				usleep(T*1000);
@@ -65,17 +82,18 @@ int main(int argc, char** argv){
 				break;
 			}
 			else
-				usleep(100);
+				usleep(50);
 			//pthread_mutex_unlock(&mutex);
 		}
 		// control
 		count++;
 	}
+ printf("average wait time: %ld\n",waittime/waitcount); 
 	return 0;
 }
 
 void *passenger(void* arg){
-	int id = (int) arg;
+	int id = *(int*) arg;
 	char wonder[30];
 	char returnline[30];
 	char temp[30];
@@ -93,7 +111,9 @@ void *passenger(void* arg){
 	strcat(wonder," passenger wanders around the park.");
 	strcat(returnline, " passenger returns for another ride.");
 	printf("%s %s\n",wonder,returnline);*/
+ 
 	while(count<N){
+    gettimeofday(&back_to_queue[id], NULL);
 		pthread_mutex_lock(&mutex);
 			array[ln%n] = id;
 			line[id]=1;
@@ -106,9 +126,12 @@ void *passenger(void* arg){
 		pthread_mutex_unlock(&mutex);*/
 		pthread_mutex_unlock(&mutex);
 		while(line[id]==1)
-			usleep(100);
+			usleep(50);
+  
 		printf("%d passenger wanders around the park.\n",id);
-		usleep((rand()%100+1));
+	//	usleep((rand()*100%10000000+10000000));
+		usleep((rand())%100000);
 		printf("%d passenger returns for another ride.\n",id);
+    //gettimeofday(&back_to_queue[id], NULL);
 	}
 }
